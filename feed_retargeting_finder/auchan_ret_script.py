@@ -1,5 +1,8 @@
 import xml.etree.ElementTree as ET
 import pandas as pd
+import requests
+from pathlib import Path
+from datetime import datetime
 
 pd.set_option('display.width', 1500)
 pd.set_option('display.max_columns', None)
@@ -9,8 +12,22 @@ pd.set_option('display.max_colwidth', 100)
 class RemarketingFeedMatch:
     """Класс для поиска соответствий в фиде для офферного ремаркетинга"""
 
-tree = ET.parse("moscow.xml")
-root = tree.getroot()
+tree = requests.get('https://skrypnikovmk.com/moscow.xml')
+root = ET.fromstring(tree.content)
+
+def file_save(df: pd.DataFrame, mode: int = 0):
+    """Защищенный метод. Создает путь к файлу в указанной папке."""
+    if mode == 0:
+        # Сохранить в файл
+        folder_path = Path(__file__).parent / 'outputs'
+        folder_path.mkdir(parents=True, exist_ok=True)
+
+        file_path = folder_path / f'remarketing_find_{datetime.now().strftime("%Y%m%d-%H%M%S")}.xlsx'
+
+        df.to_excel(file_path, index=False)
+    elif mode == 1:
+        # Вывести в консоль
+        print(df)
 
 def feed_to_dataframe(rows_limit: int = None) -> pd.DataFrame:
     """Преобразует фид в DataFrame"""
@@ -40,9 +57,6 @@ def filter_has_matches(df):
 
     return df
 
-mass = feed_to_dataframe()
-mass = filter_has_matches(mass)
-
 def pair(element: pd.Series):
     try:
         filtered_mass = mass[
@@ -70,5 +84,9 @@ def pair(element: pd.Series):
 
     return element
 
+mass = feed_to_dataframe(100)
+mass = filter_has_matches(mass)
 mass = mass.apply(pair, axis=1)
-print(mass)
+mass = mass.drop(columns=['first_3', 'matches_count'])
+mass = mass[mass['new_name'].notna()]
+file_save(mass, 0)
