@@ -49,27 +49,20 @@ class RemarketingFeedMatch:
 
     def pair(self, element):
         """Подставить альтернативное значение для строки в DataFrame"""
-        mass = self.df
+        df = self.df
         try:
-            filtered_mass = mass[
-                (mass['price'] > element['price']) &
-                (mass['price'] < element['price'] * 1.2) &
-                (mass['first_3'] == element['first_3'])
+            filtered_df = df[
+                (df['price'] > element['price']) &
+                (df['price'] < element['price'] * 1.2) &
+                (df['first_3'] == element['first_3'])
                 ].sort_values(by=['price']).reset_index(drop=True)
 
-            if not filtered_mass.empty:
-                # Если есть совпадения
-                a = filtered_mass.iloc[0]
+            if not filtered_df.empty:
+                a = filtered_df.iloc[0]
                 element['new_id'] = a['id']
                 element['new_name'] = a['name']
                 element['new_url'] = a['url']
                 element['new_price'] = a['price']
-            else:
-                # Если нет совпадений
-                element['new_id'] = None
-                element['new_name'] = None
-                element['new_url'] = None
-                element['new_price'] = None
 
         except Exception as e:
             print(f"Error: {str(e)}. Element: {element}")
@@ -86,12 +79,13 @@ class RemarketingFeedMatch:
         """Убрать вспомогательные столбцы и отфильтровать непустые альт. значения"""
         df = self.df
         df = df.drop(columns=['first_3', 'matches_count'])
-        df = df.mass[df['new_name'].notna()]
+        df = df[df['new_name'].notna()]
         self.df = df
 
     def file_save(self, mode: int = 0):
         """Создает путь к файлу в указанной папке."""
         df = self.df
+
         if mode == 0:
             # Сохранить в файл
             folder_path = Path(__file__).parent / 'outputs'
