@@ -1,17 +1,15 @@
-from datetime import datetime
-from pathlib import Path
 import xml.etree.ElementTree as ET
 
 import pandas as pd
 import requests
 
-pd.set_option('display.width', 1500)
-pd.set_option('display.max_columns', None)
-pd.set_option('display.max_colwidth', 100)
-# pd.set_option('display.max_rows', None)
+from constants import (
+    MAX_APPRECIATION_COEF,
+)
+
 
 class RemarketingFeedMatch:
-    """Класс для поиска соответствий в фиде для офферного ремаркетинга"""
+    """Класс для поиска соответствий в фиде для офферного ремаркетинга."""
 
     def __init__(self, feed):
         tree = requests.get(feed)
@@ -22,16 +20,16 @@ class RemarketingFeedMatch:
         """Преобразовать фид в DataFrame"""
         data = []
 
-        for i, v in enumerate(self.root.iter('offer')):
-            if rows_limit is not None and i >= rows_limit:
+        for i, value in enumerate(self.root.iter('offer')):
+            if rows_limit and i >= rows_limit:
                 break
 
             offer_data = {
-                'id': v.attrib.get('id'),
-                'name': v.findtext('name'),
-                'url': v.findtext('url'),
-                'price': float(v.findtext('price')),
-                'categoryId': v.findtext('categoryId'),
+                'id': value.attrib.get('id'),
+                'name': value.findtext('name'),
+                'url': value.findtext('url'),
+                'price': float(value.findtext('price')),
+                'categoryId': value.findtext('categoryId'),
             }
 
             data.append(offer_data)
@@ -39,23 +37,21 @@ class RemarketingFeedMatch:
         self.df = pd.DataFrame(data)
 
     def filter_has_matches(self):
-        """Отфильтровать только те строки, для которых есть альтернативное значение"""
-        df = self.df
-        df['first_3'] = df['name'].apply(lambda x: ' '.join(x.split()[:3]))
-        df['matches_count'] = df['first_3'].apply(lambda x: df['first_3'].to_list().count(x))
-        df = df[df['matches_count'] > 1]
+        """Отфильтровать только те строки, для которых есть альтернативное значение."""
+        self.df['first_3'] = self.df['name'].apply(lambda x: ' '.join(x.split()[:3]))
+        self.df['matches_count'] = (self.df['first_3']
+                                    .map(self.df['first_3']
+                                    .value_counts()))
+        self.df = self.df[self.df['matches_count'] > 1]
 
-        self.df = df
-
-    def pair(self, element):
-        """Подставить альтернативное значение для строки в DataFrame"""
-        df = self.df
+    def _pair(self, element: pd.Series) -> pd.Series:
+        """Подобрать пару для замены."""
         try:
-            filtered_df = df[
-                (df['price'] > element['price']) &
-                (df['price'] < element['price'] * 1.2) &
-                (df['first_3'] == element['first_3'])
-                ].sort_values(by=['price']).reset_index(drop=True)
+            filtered_df = self.df[
+                (self.df['price'] > element['price'])
+                & (self.df['price'] < element['price'] * MAX_APPRECIATION_COEF)
+                & (self.df['first_3'] == element['first_3'])
+            ].sort_values(by=['price']).reset_index(drop=True)
 
             if not filtered_df.empty:
                 a = filtered_df.iloc[0]
@@ -63,6 +59,11 @@ class RemarketingFeedMatch:
                 element['new_name'] = a['name']
                 element['new_url'] = a['url']
                 element['new_price'] = a['price']
+            else:
+                element['new_id'] = None
+                element['new_name'] = None
+                element['new_url'] = None
+                element['new_price'] = None
 
         except Exception as e:
             print(f"Error: {str(e)}. Element: {element}")
@@ -70,43 +71,16 @@ class RemarketingFeedMatch:
         return element
 
     def apply_pair(self):
-        """Применить pair ко всем строкам"""
-        df = self.df
-        df = df.apply(lambda x: self.pair(x), axis=1)
-        self.df = df
+        """Применить pair ко всем строкам."""
+        try:
+            self.df = self.df.apply(lambda x: self._pair(x), axis=1)
+
+        except KeyError:
+            print('DataFrame пуст')
 
     def final_view(self):
-        """Убрать вспомогательные столбцы и отфильтровать непустые альт. значения"""
-        df = self.df
-        df = df.drop(columns=['first_3', 'matches_count'])
-        df = df[df['new_name'].notna()]
-        self.df = df
+        """Убрать вспомогательные столбцы и отфильтровать строки без пары."""
+        self.df = self.df.drop(columns=['first_3', 'matches_count'])
+        self.df = self.df[self.df['new_name'].notna()]
 
-    def file_save(self, mode: int = 0):
-        """Создает путь к файлу в указанной папке."""
-        df = self.df
-
-        if mode == 0:
-            # Сохранить в файл
-            folder_path = Path(__file__).parent / 'outputs'
-            folder_path.mkdir(parents=True, exist_ok=True)
-            file_path = folder_path / f'remarketing_find_{datetime.now().strftime("%Y%m%d-%H%M%S")}.xlsx'
-            df.to_excel(file_path, index=False)
-        elif mode == 1:
-            # Вывести в консоль
-            print(df)
-
-def main():
-    feed = 'https://skrypnikovmk.com/moscow.xml'
-    ex = RemarketingFeedMatch(feed)
-    ex.feed_to_dataframe(50)
-    ex.filter_has_matches()
-    ex.apply_pair()
-    ex.final_view()
-    ex.file_save(1)
-
-if __name__ == '__main__':
-    main()
-
-
-
+        return self.df
