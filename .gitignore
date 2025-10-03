@@ -13,4 +13,4 @@ __pycache__/
 .venv
 MANIFEST.in
 outputs/
-DRAFT.py
+no_git/

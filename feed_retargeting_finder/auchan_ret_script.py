@@ -1,4 +1,4 @@
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as et
 
 import pandas as pd
 import requests
@@ -13,7 +13,7 @@ class RemarketingFeedMatch:
 
     def __init__(self, feed):
         tree = requests.get(feed)
-        self.root = ET.fromstring(tree.content)
+        self.root = et.fromstring(tree.content)
         self.df = None
 
     def feed_to_dataframe(self, rows_limit: int = None):
@@ -41,7 +41,7 @@ class RemarketingFeedMatch:
         self.df['first_3'] = self.df['name'].apply(lambda x: ' '.join(x.split()[:3]))
         self.df['matches_count'] = (self.df['first_3']
                                     .map(self.df['first_3']
-                                    .value_counts()))
+                                         .value_counts()))
         self.df = self.df[self.df['matches_count'] > 1]
 
     def _pair(self, element: pd.Series) -> pd.Series:
@@ -51,7 +51,7 @@ class RemarketingFeedMatch:
                 (self.df['price'] > element['price'])
                 & (self.df['price'] < element['price'] * MAX_APPRECIATION_COEF)
                 & (self.df['first_3'] == element['first_3'])
-            ].sort_values(by=['price']).reset_index(drop=True)
+                ].sort_values(by=['price']).reset_index(drop=True)
 
             if not filtered_df.empty:
                 a = filtered_df.iloc[0]
@@ -82,5 +82,3 @@ class RemarketingFeedMatch:
         """Убрать вспомогательные столбцы и отфильтровать строки без пары."""
         self.df = self.df.drop(columns=['first_3', 'matches_count'])
         self.df = self.df[self.df['new_name'].notna()]
-
-        return self.df
