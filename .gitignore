@@ -15,3 +15,4 @@ MANIFEST.in
 outputs/
 no_git/
 setup.cfg
+unit_tests/
