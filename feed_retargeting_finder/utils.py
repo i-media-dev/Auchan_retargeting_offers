@@ -10,6 +10,7 @@ from constants import (
     DATETIME_FOR_NAME,
 )
 
+
 def file_save(df: pd.DataFrame, in_file: bool = True):
     """Сохраняет файл в указанной папке."""
     if in_file:
@@ -17,7 +18,9 @@ def file_save(df: pd.DataFrame, in_file: bool = True):
         parent_folder = Path(__file__).parent
         folder_path = parent_folder / 'outputs'
         folder_path.mkdir(parents=True, exist_ok=True)
-        file_path = folder_path / f'{parent_folder}_{datetime.now().strftime(DATETIME_FOR_NAME)}.xlsx'
+        file_path = (
+            folder_path / f'{parent_folder}_'
+            f'{datetime.now().strftime(DATETIME_FOR_NAME)}.xlsx')
         df.to_excel(file_path, index=False)
     else:
         # Вывести в консоль

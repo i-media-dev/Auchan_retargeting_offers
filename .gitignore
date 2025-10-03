@@ -10,7 +10,8 @@
 env/
 __pycache__/
 .env
-.venv
+.venv/
 MANIFEST.in
 outputs/
 no_git/
+setup.cfg
