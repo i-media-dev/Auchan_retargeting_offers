@@ -1,8 +1,7 @@
-import xml.etree.ElementTree as et
+import xml.etree.ElementTree as ET
 
 import pandas as pd
 import requests
-
 from constants import (
     MAX_APPRECIATION_COEF,
 )
@@ -13,11 +12,12 @@ class RemarketingFeedMatch:
 
     def __init__(self, feed):
         tree = requests.get(feed)
-        self.root = et.fromstring(tree.content)
+        self.root = ET.fromstring(tree.content)
         self.df = None
 
     def feed_to_dataframe(self, rows_limit: int = None):
         """Преобразовать фид в DataFrame"""
+
         data = []
 
         for i, value in enumerate(self.root.iter('offer')):
@@ -37,21 +37,29 @@ class RemarketingFeedMatch:
         self.df = pd.DataFrame(data)
 
     def filter_has_matches(self):
-        """Отфильтровать только те строки, для которых есть альтернативное значение."""
-        self.df['first_3'] = self.df['name'].apply(lambda x: ' '.join(x.split()[:3]))
-        self.df['matches_count'] = (self.df['first_3']
-                                    .map(self.df['first_3']
-                                         .value_counts()))
+        """Отфильтровать только те строки,
+        для которых есть альтернативное значение.
+        """
+
+        self.df['first_3'] = self.df['name'].apply(
+            lambda x: ' '.join(x.split()[:3])
+        )
+        self.df['matches_count'] = (
+            self.df['first_3'].map(
+                self.df['first_3'].value_counts()
+            )
+        )
         self.df = self.df[self.df['matches_count'] > 1]
 
     def _pair(self, element: pd.Series) -> pd.Series:
         """Подобрать пару для замены."""
+
         try:
             filtered_df = self.df[
                 (self.df['price'] > element['price'])
                 & (self.df['price'] < element['price'] * MAX_APPRECIATION_COEF)
                 & (self.df['first_3'] == element['first_3'])
-                ].sort_values(by=['price']).reset_index(drop=True)
+            ].sort_values(by=['price']).reset_index(drop=True)
 
             if not filtered_df.empty:
                 a = filtered_df.iloc[0]
@@ -72,6 +80,7 @@ class RemarketingFeedMatch:
 
     def apply_pair(self):
         """Применить pair ко всем строкам."""
+
         try:
             self.df = self.df.apply(lambda x: self._pair(x), axis=1)
 
@@ -80,5 +89,6 @@ class RemarketingFeedMatch:
 
     def final_view(self):
         """Убрать вспомогательные столбцы и отфильтровать строки без пары."""
+
         self.df = self.df.drop(columns=['first_3', 'matches_count'])
         self.df = self.df[self.df['new_name'].notna()]
