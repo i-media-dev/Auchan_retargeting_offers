@@ -14,8 +14,6 @@ def main():
     ex.filter_has_matches()
     ex.apply_pair()
     ex.final_view()
-    # a = pd.DataFrame
-    # ex._check_dataframe_exist(a)
     file_save(ex.df, False)
 
 
