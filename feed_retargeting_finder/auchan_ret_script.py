@@ -1,12 +1,13 @@
 import xml.etree.ElementTree as ET
+import inspect
 
 import pandas as pd
 import requests
 from constants import (
     MAX_APPRECIATION_COEF,
+    FEED,
 )
 from utils import (
-    check_dataframe_exist,
     set_none_values,
 )
 
@@ -14,11 +15,26 @@ from utils import (
 class RemarketingFeedMatch:
     """Класс для поиска соответствий в фиде для офферного ремаркетинга."""
 
-    def __init__(self, feed):
+    tree = requests.get(FEED, timeout=10)
+
+    @classmethod
+    def tree_raise_status(cls):
+        """Проверить HTTP статус"""
+        cls.tree.raise_for_status()
+
+    @staticmethod
+    def _check_dataframe_exist(df):
+        """Проверить, что DataFrame существует и не пуст."""
+
+        if df is None or df.empty:
+            caller_frame = inspect.currentframe().f_back
+            caller_name = caller_frame.f_code.co_name
+            raise ValueError(f'Метод {caller_name}: '
+                             f'DataFrame пуст или не инициализирован')
+
+    def __init__(self):
         try:
-            tree = requests.get(feed, timeout=10)
-            tree.raise_for_status()  # Проверка HTTP статуса
-            self.root = ET.fromstring(tree.content)
+            self.root = ET.fromstring(self.tree.content)
             self.df = None
 
         except requests.exceptions.RequestException as e:
@@ -58,7 +74,7 @@ class RemarketingFeedMatch:
         для которых есть альтернативное значение.
         """
 
-        check_dataframe_exist(self.df)
+        self._check_dataframe_exist(self.df)
 
         try:
             self.df['first_3'] = self.df['name'].apply(
@@ -103,12 +119,12 @@ class RemarketingFeedMatch:
     def apply_pair(self):
         """Применить pair ко всем строкам."""
 
-        check_dataframe_exist(self.df)
+        self._check_dataframe_exist(self.df)
         self.df = self.df.apply(lambda x: self._pair(x), axis=1)
 
     def final_view(self):
         """Убрать вспомогательные столбцы и отфильтровать строки без пары."""
 
-        check_dataframe_exist(self.df)
+        self._check_dataframe_exist(self.df)
         self.df = self.df.drop(columns=['first_3', 'matches_count'])
         self.df = self.df[self.df['new_name'].notna()]

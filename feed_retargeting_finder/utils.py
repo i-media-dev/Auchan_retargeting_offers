@@ -1,8 +1,7 @@
 from datetime import datetime
-import inspect
+
 import pandas as pd
 from pathlib import Path
-
 from constants import (
     DISPLAY_WIDTH,
     DISPLAY_MAX_COLUMNS,
@@ -31,16 +30,6 @@ def file_save(df: pd.DataFrame, in_file: bool = True):
         pd.set_option('display.max_colwidth', DISPLAY_MAX_COLWIDTH)
         pd.set_option('display.max_rows', DISPLAY_MAX_ROWS)
         print(df)
-
-
-def check_dataframe_exist(df):
-    """Проверить, что DataFrame существует и не пуст."""
-
-    if df is None or df.empty:
-        caller_frame = inspect.currentframe().f_back
-        caller_name = caller_frame.f_code.co_name
-        raise ValueError(f'Метод {caller_name}: '
-                         f'DataFrame пуст или не инициализирован')
 
 
 def set_none_values(element: pd.Series) -> pd.Series:

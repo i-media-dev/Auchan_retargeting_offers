@@ -4,16 +4,18 @@ from utils import (
 )
 from constants import (
     FEED_DEEP,
-    FEED,
 )
 
 
 def main():
-    ex = RemarketingFeedMatch(FEED)
+    ex = RemarketingFeedMatch()
+    ex.tree_raise_status()
     ex.feed_to_dataframe(FEED_DEEP)
     ex.filter_has_matches()
     ex.apply_pair()
     ex.final_view()
+    # a = pd.DataFrame
+    # ex._check_dataframe_exist(a)
     file_save(ex.df, False)
 
 
