@@ -10,11 +10,11 @@ from constants import (
 def main():
     ex = RemarketingFeedMatch()
     ex.tree_raise_status()
-    ex.feed_to_dataframe(FEED_DEEP)
+    ex.feed_to_dataframe()
     ex.filter_has_matches()
     ex.apply_pair()
     ex.final_view()
-    file_save(ex.df, False)
+    file_save(ex.df, True)
 
 
 if __name__ == '__main__':
